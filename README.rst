@@ -16,16 +16,19 @@ Installation and Usage
 ======================
 Steps for running locally (DAW and bot on same machine):
 
-1. Install *python 3.9* or newer. If you have *pip* available you can run ``python -m pip install git+https://github.com/xveiga/dawcord.git@main``.
+1. Install *Python 3.9* or newer. If you have *pip* available you can run ``python -m pip install git+https://github.com/xveiga/dawcord.git@main``.
 #. Install ReaStream (https://www.reaper.fm/reaplugs/) and configure your DAW to find the plugin correctly.
 #. Run the bot once with ``dawcord 0``.
-#. Go to the Discord Developer Portal, create a bot, and get an OAuth2 token.
-#. Paste the token on the *config.json* file.
+#. Go to the [*Discord Developer Portal*](https://discord.com/developers/applications), and create a new application.
+#. Go to the *Bot* section, and add a new bot. Click on *Reset token*, confirm, and copy it for later.
+#. Go to the *URL Generator* on the *OAuth2* section, select *Bot* scope, then generate an invite link with *Connect* and *Voice* permissions (it will look something like ``https://discord.com/api/oauth2/authorize?client_id=<your bot's ID>&permissions=3145728&scope=bot``.
+#. Copy and paste the authorization URL on your browser, and invite the bot to the server you want.
+#. Paste the bot token on the *config.json* file.
 #. Enable *Developer Options* in Discord client, go to the channel you want the bot to join and click *Copy ID*.
-#. Launch your DAW, configure the sample rate to **48000Hz** and place ReaStream on the audio track/source you want to stream to Discord. Other sample rates are **not** supported yet.
+#. Launch your DAW, configure the sample rate to **48000Hz** and place *ReaStream* on the audio track/source you want to stream to Discord. Other sample rates are **not** supported yet.
 #. Choose *Send audio/MIDI*, then select *local broadcast*, leave identifier as *default*.
 #. Run the bot again with ``dawcord <channelID>``, replacing ``<channelID>`` with the ID you copied on step 4.
-#. Enjoy! For subsequent runs only steps 7 to 9 are needed.
+#. Enjoy! For subsequent runs only steps 10 to 12 are needed.
 #. Stop the bot with *Control+C*, or by disconnecting it manually from the channel.
 
 Notes / Known issues
@@ -49,9 +52,9 @@ Notes / Known issues
   adds delay on closing, making the bot seem unresponsive, so i've decided to
   keep it as is.
 - Do not add more than one source with the same identifier broadcasting on the
-  same broadcast domain, as it will result in "interlaced" choppy audio. If you
-  need more than one source for other uses, change the *default* identifier in
-  the *config.json* file.
+  same domain, as it will result in "interlaced" choppy audio. If you need more
+  than one source for other uses, change the *default* identifier in the
+  *config.json* file.
 - With separate bot accounts, you can run multiple instances. Just pass the
   command line option ``--config`` to specify a different config file and have
   indepentent settings for each one.
