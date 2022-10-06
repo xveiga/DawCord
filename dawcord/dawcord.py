@@ -18,6 +18,8 @@ class DawCord(commands.Bot):
         identifier="default",
         resample_quality="HQ",
         gain=1,
+        playback_slack=2,
+        max_buffer_frames=8,
         *args,
         **kwargs,
     ):
@@ -28,6 +30,8 @@ class DawCord(commands.Bot):
         self._identifier = identifier
         self._resample_quality = resample_quality
         self._gain = gain
+        self._playback_slack = playback_slack
+        self._max_buffer_frames = max_buffer_frames
         self.voiceclient = None
 
     async def on_ready(self):
@@ -59,6 +63,8 @@ class DawCord(commands.Bot):
                 identifier=self._identifier,
                 resample_quality=self._resample_quality,
                 gain=self._gain,
+                playback_slack=self._playback_slack,
+                max_buffer_frames=self._max_buffer_frames,
             )
 
             # Start audio transmission

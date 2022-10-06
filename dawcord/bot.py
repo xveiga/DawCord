@@ -5,7 +5,7 @@ import argparse
 import discord
 from discord.ext import commands
 from .utils.settings import load_settings
-from dawcord import DawCord
+from .dawcord import DawCord
 
 
 def run():
@@ -48,6 +48,8 @@ def run():
         identifier=config["identifier"],
         resample_type=config["resample_quality"],
         gain=config["gain"],
+        playback_slack=config["playback_latency"],
+        max_buffer_frames=config["max_buffer"],
     )
     # Run with token, and disable log handler (already configured root logger above)
     bot.run(config["token"], log_handler=None)
