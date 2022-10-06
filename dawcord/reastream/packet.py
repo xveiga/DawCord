@@ -108,20 +108,24 @@ class ReaStreamAudioPacket(ReaStreamPacket):
         return self._frames
 
     @property
-    def interleaved_frames(self):
-        # Not tested for channel numbers > 2
-        # For interleaved order, each frame contains a sample from each channel sequentially
-        # Calculate channel stride
-        stride = self._body_len // self._channels
-        interleaved_frames = bytearray()
-        # Iterate over each float value
-        for x in range(0, stride, 4):
-            # For each channel,
-            for ch in range(0, self._channels):
-                # Jump a fixed stride to get next sample
-                pos = stride * ch + x
-                interleaved_frames += self._frames[pos : pos + 4]
-        return interleaved_frames
+    def frames_length(self):
+        return self._body_len
+
+    # @property
+    # def interleaved_frames(self):
+    #     # Not tested for channel numbers > 2
+    #     # For interleaved order, each frame contains a sample from each channel sequentially
+    #     # Calculate channel stride
+    #     stride = self._body_len // self._channels
+    #     interleaved_frames = bytearray()
+    #     # Iterate over each float value
+    #     for x in range(0, stride, 4):
+    #         # For each channel,
+    #         for ch in range(0, self._channels):
+    #             # Jump a fixed stride to get next sample
+    #             pos = stride * ch + x
+    #             interleaved_frames += self._frames[pos : pos + 4]
+    #     return interleaved_frames
 
     @staticmethod
     def _raw_frames_to_list(packet_body: bytes, packet_body_len: int, channels: int):

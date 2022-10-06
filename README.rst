@@ -33,7 +33,6 @@ Steps for running locally (DAW and bot on same machine):
 
 Notes / Known issues
 ====================
-- Only supports 48kHz sample rate. No decimation or interpolation is implemented.
 - Bitrate is hardcoded on discord.py to 160kbps, independendly of the channel
   configuration. Quality is pretty good to show something quickly, but not for
   any serious work (sound is muddier, middle frequencies are boosted slightly,
@@ -47,10 +46,6 @@ Notes / Known issues
   there's currently no mechanism to flush it other than a restart.
 - Voice client is not stopped when UDP packets stop, but the opus encoder and
   discord seem to work properly with "emptiness" anyway.
-- On Windows platforms, asyncio throws a "RuntimeError: Event loop is closed",
-  this is a problem with the upstream implementation. There's a workaround which
-  adds delay on closing, making the bot seem unresponsive, so i've decided to
-  keep it as is.
 - Do not add more than one source with the same identifier broadcasting on the
   same domain, as it will result in "interlaced" choppy audio. If you need more
   than one source for other uses, change the *default* identifier in the

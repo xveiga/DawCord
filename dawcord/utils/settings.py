@@ -12,7 +12,14 @@ def load_settings(filename):
         return read_json(path)
 
     # If file does not exist, create it with default values
-    settings = {"token": "", "ip": "127.0.0.1", "port": 58710, "identifier": "default"}
+    settings = {
+        "token": "",
+        "ip": "127.0.0.1",
+        "port": 58710,
+        "identifier": "default",
+        "resample_quality": "VHQ",
+        "gain": -3,
+    }
     write_json(path, settings)
     return None
 

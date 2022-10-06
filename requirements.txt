@@ -1,1 +1,3 @@
-discord.py[voice]==1.7.3
+discord.py[voice]==2.0.1
+numpy==1.23.3
+soxr==0.3.2

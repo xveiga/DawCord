@@ -3,7 +3,10 @@
 import discord
 from discord.ext import commands
 import sys
+import logging
 from .reastream.source import ReaStreamAudioSource
+
+_log = logging.getLogger(__name__)
 
 
 class DawCord(commands.Bot):
@@ -13,6 +16,8 @@ class DawCord(commands.Bot):
         ipaddr="127.0.0.1",
         port=58710,
         identifier="default",
+        resample_quality="HQ",
+        gain=1,
         *args,
         **kwargs,
     ):
@@ -21,15 +26,17 @@ class DawCord(commands.Bot):
         self._ipaddr = ipaddr
         self._port = port
         self._identifier = identifier
+        self._resample_quality = resample_quality
+        self._gain = gain
         self.voiceclient = None
 
     async def on_ready(self):
-        print(f"Logged in as {self.user} (ID: {self.user.id})")
+        _log.info(f"Logged in as {self.user} (ID: {self.user.id})")
         try:
             # Get channel ID
             self.channel = self.get_channel(self._channelid)
             if not self.channel:
-                print(
+                _log.error(
                     f"Channel {self._channelid} could not be found or does not exist",
                     file=sys.stderr,
                 )
@@ -38,7 +45,7 @@ class DawCord(commands.Bot):
 
             # Connect to voicechannel
             self.voiceclient = await self.channel.connect()
-            print(f"Connected to {self._channelid}")
+            _log.info(f"Connected to {self._channelid}")
 
             # Set bot as "deaf", not receiving audio/listening to other users
             await self.channel.guild.change_voice_state(
@@ -47,22 +54,26 @@ class DawCord(commands.Bot):
 
             # Configure audio source from ReaStream
             self.audiosource = ReaStreamAudioSource(
-                ipaddr=self._ipaddr, port=self._port, identifier=self._identifier
+                ipaddr=self._ipaddr,
+                port=self._port,
+                identifier=self._identifier,
+                resample_quality=self._resample_quality,
+                gain=self._gain,
             )
 
             # Start audio transmission
             self.voiceclient.play(self.audiosource)
-            print("ReaStream sink is alive")
+            _log.info("ReaStream sink is alive")
 
         except PermissionError as e:
-            print(
+            _log.error(
                 f"Could not bind to UDP socket {self._ipaddr}:{self._port}.\n"
                 f"Make sure no other program is bound to that port or check your firewall settings.\n{str(e)}",
                 file=sys.stderr,
             )
             await self.close()
         except Exception as e:
-            print(str(e), file=sys.stderr)
+            _log.error(str(e), file=sys.stderr)
             await self.close()
 
     async def on_voice_state_update(self, member, before, after):
@@ -71,7 +82,7 @@ class DawCord(commands.Bot):
             await self.close()
 
     async def close(self):
-        print("Disconnecting...")
+        _log.info("Disconnecting...")
         if self.voiceclient:
             # Disconnect voice
             await self.voiceclient.disconnect()

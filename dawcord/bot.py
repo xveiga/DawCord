@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import discord
 from discord.ext import commands
 from .utils.settings import load_settings
-from .dawcord import DawCord
-
-# import asyncio
-# import platform
+from dawcord import DawCord
 
 
 def run():
@@ -29,10 +27,6 @@ def run():
     )
     args = parser.parse_args()
 
-    # "Event loop is closed" asyncio workaround for Windows (adds delay on close, SIGTERM)
-    # if platform.system() == "Windows":
-    #     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
     # Load/create settings file
     config = load_settings(args.config)
     if config is None:
@@ -41,15 +35,22 @@ def run():
         )
         return
 
+    # Setup global logging
+    discord.utils.setup_logging(root=True)
+
     # Configure and run bot
     bot = DawCord(
+        intents=discord.Intents.default(),
         command_prefix="%",
         channelid=int(args.channelID),
         ipaddr=config["ip"],
         port=config["port"],
         identifier=config["identifier"],
+        resample_type=config["resample_quality"],
+        gain=config["gain"],
     )
-    bot.run(config["token"])
+    # Run with token, and disable log handler (already configured root logger above)
+    bot.run(config["token"], log_handler=None)
 
 
 if __name__ == "__main__":
