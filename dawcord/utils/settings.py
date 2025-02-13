@@ -14,11 +14,32 @@ def load_settings(filename):
     # If file does not exist, create it with default values
     settings = {
         "token": "",
-        "ip": "127.0.0.1",
-        "port": 58710,
-        "identifier": "default",
-        "resample_quality": "VHQ",
-        "gain": -3,
+        "source": "reastream",
+        "encoder": {
+            "application": "audio",
+            "bitrate": 128,
+            "fec": True,
+            "expected_packet_loss": 0.15,
+            "bandwidth": "full",
+            "signal_type": "music",
+        },
+        "source.reastream": {
+            "ip": "127.0.0.1",
+            "port": 58710,
+            "identifier": "default",
+            "timeout": 2.0,
+            "resample_quality": "VHQ",
+            "max_buffer_frames": 8,
+            "playback_slack_frames": 2,
+            "gain": -3,
+        },
+        "source.pyaudio": {
+            "device_name": "",
+            "timeout": 2.0,
+            "max_buffer_frames": 8,
+            "playback_slack_frames": 2,
+            "gain": 0,
+        },
     }
     write_json(path, settings)
     return None

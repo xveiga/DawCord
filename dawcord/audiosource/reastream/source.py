@@ -3,14 +3,13 @@
 import discord
 import socket
 import time
-import asyncio
 import logging
 import time
 import threading
 from threading import Lock
 from math import gcd
 from .packet import ReaStreamPacket, ReaStreamAudioPacket, MAX_PACKET_LEN
-from .converter import (
+from ...conversion.converter import (
     s32_interleave_samples,
     s32_to_float,
     float_to_s16le,
@@ -20,7 +19,7 @@ from .converter import (
     val_to_db,
     float_set_gain,
 )
-from .resampler import Resampler
+from ...conversion.resampler import Resampler
 
 # See read() method for details
 TARGET_FRAME_SIZE = 3840

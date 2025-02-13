@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os
+import sys
 import discord
-from discord.ext import commands
 from .utils.settings import load_settings
 from .dawcord import DawCord
 
@@ -25,6 +26,13 @@ def run():
         default="config.json",
         help="Config file location (default 'config.json')",
     )
+    parser.add_argument(
+        "--token",
+        metavar="<token>",
+        dest="token",
+        default=None,
+        help="Discord API token",
+    )
     args = parser.parse_args()
 
     # Load/create settings file
@@ -32,6 +40,24 @@ def run():
     if config is None:
         print(
             f'Generated configuration file "{args.config}" in current directory.\nPlease fill in your bot token before running again.'
+        )
+        return
+
+    # Fetch Discord API token
+    env_token = os.environ.get("TOKEN")
+    if args.token is not None:
+        # Retrieve token from args if available
+        token = args.token
+    elif env_token is not None:
+        # Otherwise, try from environment variable
+        token = env_token
+    else:
+        # Finally, fallback to config file
+        token = config.get("token")
+    if token is None:
+        print(
+            "Could not read Discord API token neither from environment variable, nor arguments, nor config file",
+            file=sys.stderr,
         )
         return
 
@@ -43,16 +69,11 @@ def run():
         intents=discord.Intents.default(),
         command_prefix="%",
         channelid=int(args.channelID),
-        ipaddr=config["ip"],
-        port=config["port"],
-        identifier=config["identifier"],
-        resample_type=config["resample_quality"],
-        gain=config["gain"],
-        playback_slack=config["playback_latency"],
-        max_buffer_frames=config["max_buffer"],
+        config=config,
     )
+
     # Run with token, and disable log handler (already configured root logger above)
-    bot.run(config["token"], log_handler=None)
+    bot.run(token, log_handler=None)
 
 
 if __name__ == "__main__":

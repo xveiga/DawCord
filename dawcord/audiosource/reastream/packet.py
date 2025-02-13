@@ -1,15 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import array
-import asyncio
-import discord
-from discord.ext import commands
-import json
-import platform
-import socket
 import struct
-import sys
-import time
 
 # UDP packet receive buffer size
 MAX_PACKET_LEN = 2048
