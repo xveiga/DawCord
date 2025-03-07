@@ -8,6 +8,7 @@ from math import floor
 from ...conversion.converter import (
     silence_16le,
     db_to_val,
+    s16le_set_gain,
 )
 
 # See read() method for details
@@ -38,7 +39,6 @@ class PyAudioSource(discord.AudioSource):
         self._buffer = bytearray()
         self._buffer_lock = Lock()
         self._buffer_wait_event = Event()
-        self._buffer_waiting = True
         self._buffer_empty = False
         self._setup_device(device_name)
 
@@ -84,17 +84,18 @@ class PyAudioSource(discord.AudioSource):
         # If number of frames exceeds limit, clear buffer to refill it with fresh frames.
         # This is not ideal as it introduces clicking, but is camouflaged well enough
         # with discord's opus encoding and keeps latency in check
-        if len(self._buffer) > self._max_buffer_frames * TARGET_FRAME_SIZE:
+        max_size = self._max_buffer_frames * TARGET_FRAME_SIZE
+        if len(self._buffer) > max_size:
+            _log.info(f"Buffer overrun ({len(self._buffer)}/{max_size}), clearing")
             self._buffer.clear()
 
         # Append frames to buffer
         if frame_count > 0:
-            self._buffer += frames
+            self._buffer += s16le_set_gain(frames, self._gain)
 
         # Release buffer and notify reading thread data if enough frames are stored
         self._buffer_lock.release()
         if len(self._buffer) >= self._target_slack_frames:
-            self._buffer_waiting = False
             self._buffer_wait_event.set()
 
         return (frames, pya.paContinue)
@@ -108,21 +109,13 @@ class PyAudioSource(discord.AudioSource):
         # and prevent time "acceleration" glitches when the DAW cannot keep up or ReaStream stops/resumes transmitting.
 
         # If not enough frames are available
-        if len(self._buffer) < TARGET_FRAME_SIZE or self._buffer_waiting:
-            if not self._buffer_waiting:
-                _log.info(
-                    f"Buffer wait ({len(self._buffer)}/{self._target_slack_frames})"
-                )
-            # else:
-            #     _log.info(
-            #         f"Buffer underrun ({len(self._buffer)}/{TARGET_FRAME_SIZE})"
-            #     )
+        if len(self._buffer) < TARGET_FRAME_SIZE:
             # Wait for buffer to fill up again
             if not self._buffer_wait_event.wait(timeout=self._timeout):
                 # If timeout exceeded, insert silence
                 if not self._buffer_empty:
                     _log.info(
-                        f"Buffer empty ({len(self._buffer)}/{TARGET_FRAME_SIZE}), inserting silence"
+                        f"Buffer underrun ({len(self._buffer)}/{TARGET_FRAME_SIZE}), inserting silence"
                     )
                     self._buffer_empty = True
                 # Clear buffer to prevent clicks by concatenating old data when the stream is resumed

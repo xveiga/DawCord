@@ -2,10 +2,11 @@
 
 import discord
 from discord.ext import commands
-import sys
 import logging
 from .audiosource.reastream.source import ReaStreamAudioSource
 from .audiosource.pyaudio.source import PyAudioSource
+from .audiosource.player import non_blocking_play
+from .utils.settings import DEFAULT_SETTINGS
 
 _log = logging.getLogger(__name__)
 
@@ -101,13 +102,20 @@ class DawCord(commands.Bot):
             self.voiceclient = await self.channel.connect()
             _log.info(f"Connected to {self._channelid}")
 
-            # Set bot as "deaf", not receiving audio/listening to other users
-            await self.channel.guild.change_voice_state(
-                channel=self.channel, self_mute=False, self_deaf=True
-            )
-
-            # Start audio transmission
             try:
+                # Substitute player function by custom version without timer delay if enabled
+                if self._config.get(
+                    "non_blocking_player", DEFAULT_SETTINGS["non_blocking_player"]
+                ):
+                    _log.info("Non-blocking player enabled")
+                    self.voiceclient.play = non_blocking_play.__get__(self.voiceclient)
+
+                # Set bot as "deaf", not receiving audio/listening to other users
+                await self.channel.guild.change_voice_state(
+                    channel=self.channel, self_mute=False, self_deaf=True
+                )
+
+                # Start audio transmission
                 encoder_config = self._config["encoder"]
                 self.voiceclient.play(
                     self.audiosource,

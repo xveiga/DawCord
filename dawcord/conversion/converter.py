@@ -5,19 +5,27 @@ import struct
 import math
 
 
-def db_to_val(db):
+def db_to_val(db: float):
     return pow(10, db / 20)
 
 
-def val_to_db(val):
+def val_to_db(val: float):
     return 20 * math.log10(val)
 
 
-def float_set_gain(frames, gain):
+def float_set_gain(frames: list[float], gain: float):
     return [sample * gain for sample in frames]
 
 
-def s32_interleave_samples(frame_chunk, channels):
+def s16le_set_gain(frames: bytearray, gain: float):
+    out_frames = bytearray()
+    for sample in array.array("h", frames):
+        hard_clip_sample = int(min(max(sample * gain, -32768), 32767))
+        out_frames += struct.pack("<h", hard_clip_sample)
+    return out_frames
+
+
+def s32_interleave_samples(frame_chunk: bytearray, channels: int):
     # Not tested for channel numbers > 2
     # For interleaved order, each frame contains a sample from each channel sequentially
     stride = len(frame_chunk) // channels
@@ -32,11 +40,11 @@ def s32_interleave_samples(frame_chunk, channels):
     return interleaved_frames
 
 
-def s32_to_float(frames):
+def s32_to_float(frames: bytearray):
     return [sample for sample in array.array("f", frames)]
 
 
-def float_to_s16le(frames):
+def float_to_s16le(frames: bytearray):
     # Converts python float to s16le (16 bit "CD quality" PCM)
     # with hard clipping if signal exceeds maximum values
     out_frames = bytearray()
@@ -52,7 +60,7 @@ def float_to_s16le(frames):
     return bytes(out_frames), clip
 
 
-def s32_to_s16le(frames):
+def s32_to_s16le(frames: bytearray):
     # Converts s32 (32-bit float) to s16le (16 bit "CD quality" PCM)
     # with hard clipping if signal exceeds maximum values
     out_frames = bytearray()
@@ -66,7 +74,7 @@ def s32_to_s16le(frames):
     return bytes(out_frames), clip
 
 
-def mono_to_stereo_16le(frames):
+def mono_to_stereo_16le(frames: bytearray):
     # Converts s16le mono to interleaved stereo by doubling each sample
     out_frames = bytearray()
     for sample in array.array("h", frames):
@@ -74,6 +82,6 @@ def mono_to_stereo_16le(frames):
     return bytes(out_frames)
 
 
-def silence_16le(count):
+def silence_16le(count: int):
     # Returns silent 16-bit audio frames
     return bytes(struct.pack("<h", 0) * count)
