@@ -1,32 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import discord
 import logging
 import pyaudiowpatch as pya
 from threading import Lock, Event
-from math import floor
+from ..source import BaseAudioSource
 from ...conversion.converter import (
-    silence_16le,
     db_to_val,
     s16le_set_gain,
 )
 
-# See read() method for details
-TARGET_SAMPLE_RATE = 48000
-# Number of samples = Time delay * sample rate * 2 (stereo) * 2 bytes (16-bit PCM)
-TARGET_FRAME_SIZE = floor(discord.player.AudioPlayer.DELAY * TARGET_SAMPLE_RATE * 2 * 2)
-
 _log = logging.getLogger(__name__)
 
 
-class PyAudioSource(discord.AudioSource):
-
+class PyAudioSource(BaseAudioSource):
     def __init__(
         self,
         device_name=None,
         timeout=2.0,
-        max_buffer_frames=8,
-        playback_slack=2,
+        max_buffer_frames=4,
+        playback_slack=1,
         gain=0,
     ):
         self._pyaudio = pya.PyAudio()
@@ -35,7 +27,9 @@ class PyAudioSource(discord.AudioSource):
         self._gain = db_to_val(gain)
         self._max_buffer_frames = int(max_buffer_frames)
         self._playback_slack = int(playback_slack)
-        self._target_slack_frames = int(TARGET_FRAME_SIZE * self._playback_slack)
+        self._target_slack_frames = int(
+            BaseAudioSource.TARGET_FRAME_SIZE * self._playback_slack
+        )
         self._buffer = bytearray()
         self._buffer_lock = Lock()
         self._buffer_wait_event = Event()
@@ -66,8 +60,8 @@ class PyAudioSource(discord.AudioSource):
         self._stream = self._pyaudio.open(
             format=pya.paInt16,
             channels=2,
-            rate=int(TARGET_SAMPLE_RATE),
-            frames_per_buffer=TARGET_FRAME_SIZE,
+            rate=int(BaseAudioSource.TARGET_SAMPLE_RATE),
+            frames_per_buffer=BaseAudioSource.TARGET_FRAME_SIZE,
             input=True,
             input_device_index=input_device_info["index"],
             stream_callback=self._receive,
@@ -78,66 +72,28 @@ class PyAudioSource(discord.AudioSource):
         )
 
     def _receive(self, frames, frame_count, time_info, status):
-        # Adquire buffer
-        self._buffer_lock.acquire()
-
         # If number of frames exceeds limit, clear buffer to refill it with fresh frames.
         # This is not ideal as it introduces clicking, but is camouflaged well enough
         # with discord's opus encoding and keeps latency in check
-        max_size = self._max_buffer_frames * TARGET_FRAME_SIZE
+        max_size = self._max_buffer_frames * BaseAudioSource.TARGET_FRAME_SIZE
         if len(self._buffer) > max_size:
             _log.info(f"Buffer overrun ({len(self._buffer)}/{max_size}), clearing")
-            self._buffer.clear()
+            self._buffer_lock.acquire()
+            # Remove all but latest frame
+            self._buffer = self._buffer[-BaseAudioSource.TARGET_FRAME_SIZE :]
+            self._buffer_lock.release()
 
         # Append frames to buffer
         if frame_count > 0:
+            self._buffer_lock.acquire()
             self._buffer += s16le_set_gain(frames, self._gain)
+            self._buffer_lock.release()
 
         # Release buffer and notify reading thread data if enough frames are stored
-        self._buffer_lock.release()
         if len(self._buffer) >= self._target_slack_frames:
             self._buffer_wait_event.set()
 
         return (frames, pya.paContinue)
-
-    def read(self):
-        # Discord.py expects 20ms worth of 48kHz 16-bit (2 byte) stereo (2) PCM (0.02*48000*2*2 = 3840 bytes)
-        # ReaStream may send packets of variable size depending on the DAW's buffer size configuration and latency.
-        # It's therefore necessary to buffer the frames to provide a constant output to discord.py's opus encoder.
-        #
-        # Ideally, a custom encoder implementation with rate/speed control would help to keep latency to a minimum
-        # and prevent time "acceleration" glitches when the DAW cannot keep up or ReaStream stops/resumes transmitting.
-
-        # If not enough frames are available
-        if len(self._buffer) < TARGET_FRAME_SIZE:
-            # Wait for buffer to fill up again
-            if not self._buffer_wait_event.wait(timeout=self._timeout):
-                # If timeout exceeded, insert silence
-                if not self._buffer_empty:
-                    _log.info(
-                        f"Buffer underrun ({len(self._buffer)}/{TARGET_FRAME_SIZE}), inserting silence"
-                    )
-                    self._buffer_empty = True
-                # Clear buffer to prevent clicks by concatenating old data when the stream is resumed
-                self._buffer = bytearray()
-                return bytes(silence_16le(TARGET_FRAME_SIZE >> 1))
-
-        # When enough frames are available, reset buffer empty message flag and return audio frames
-        self._buffer_empty = False
-        self._buffer_lock.acquire()
-        # Return only the target number of frames
-        return_frames = self._buffer[:TARGET_FRAME_SIZE]
-        # The remaining frames are stored to be concatenated on the next function call
-        self._buffer = self._buffer[TARGET_FRAME_SIZE:]
-        self._buffer_lock.release()
-
-        # Reset buffer wait flag
-        self._buffer_wait_event.clear()
-        # print(f"Play position: {len(self._buffer)/len(return_frames):.2f}")
-        return bytes(return_frames)
-
-    def is_opus(self):
-        return False
 
     def cleanup(self):
         if self._stream is not None:

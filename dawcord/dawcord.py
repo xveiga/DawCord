@@ -5,6 +5,7 @@ from discord.ext import commands
 import logging
 from .audiosource.reastream.source import ReaStreamAudioSource
 from .audiosource.pyaudio.source import PyAudioSource
+from .audiosource.vban.source import VBANAudioSource
 from .audiosource.player import non_blocking_play
 from .utils.settings import DEFAULT_SETTINGS
 
@@ -91,6 +92,18 @@ class DawCord(commands.Bot):
                         playback_slack=source_config["playback_slack_frames"],
                         max_buffer_frames=source_config["max_buffer_frames"],
                     )
+                elif self._config["source"] == "vban":
+                    source_config = self._config["source.vban"]
+                    self.audiosource = VBANAudioSource(
+                        ipaddr=source_config["ip"],
+                        port=source_config["port"],
+                        identifier=source_config["identifier"],
+                        resample_quality=source_config["resample_quality"],
+                        gain=source_config["gain"],
+                        playback_slack=source_config["playback_slack_frames"],
+                        max_buffer_frames=source_config["max_buffer_frames"],
+                    )
+
             except KeyError as e:
                 _log.error(
                     "Could not find configuration key: " + e.messsage

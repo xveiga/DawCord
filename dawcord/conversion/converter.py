@@ -44,7 +44,7 @@ def s32_to_float(frames: bytearray):
     return [sample for sample in array.array("f", frames)]
 
 
-def float_to_s16le(frames: bytearray):
+def float_to_s16le(frames):
     # Converts python float to s16le (16 bit "CD quality" PCM)
     # with hard clipping if signal exceeds maximum values
     out_frames = bytearray()
@@ -74,6 +74,21 @@ def s32_to_s16le(frames: bytearray):
     return bytes(out_frames), clip
 
 
+def s16le_to_int(frames: bytearray):
+    # Converts s16le byte array (16 bit "CD quality" PCM)
+    # to a python integer list
+    return [sample for sample in array.array("h", frames)]
+
+
+def int_to_s16le(frames):
+    # Converts python 16-bit integer list
+    # to s16le byte array (16 bit "CD quality" PCM)
+    out_frames = bytearray()
+    for sample in frames:
+        out_frames += struct.pack("<h", sample)
+    return bytes(out_frames)
+
+
 def mono_to_stereo_16le(frames: bytearray):
     # Converts s16le mono to interleaved stereo by doubling each sample
     out_frames = bytearray()
@@ -81,6 +96,22 @@ def mono_to_stereo_16le(frames: bytearray):
         out_frames += struct.pack("<hh", sample, sample)
     return bytes(out_frames)
 
+def s16le_get_channels(frames: bytearray, channel_count: int, target_count: int = 2, offset: int = 0):
+    # Selects the first target_channels of an interleaved s16le frame
+    out_frames = bytearray()
+    # Unpack frames into array
+    frame_array = array.array("h", frames)
+
+    # For each frame, which includes one sample of each channel
+    for i in range(0, len(frame_array), channel_count):
+            # For each channel in the wanted range
+            # (from offset, target_count number of channels)
+            for j in range(offset, offset + target_count):
+                # Obtain wanted sample with offset
+                sample = frame_array[i+j]
+                # Pack result as s16le
+                out_frames += struct.pack("<h", sample)
+    return bytes(out_frames)
 
 def silence_16le(count: int):
     # Returns silent 16-bit audio frames
