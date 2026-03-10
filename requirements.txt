@@ -1,4 +1,4 @@
-discord.py[voice]==2.5.2
-numpy==2.2.3
-soxr==0.5.0
-pyaudiowpatch==0.2.12.7
+discord.py[voice] == 2.7.1
+numpy == 2.4.2
+soxr == 1.0.0
+pyaudiowpatch == 0.2.12.8
