@@ -246,5 +246,9 @@ class ReaStreamAudioSource(discord.AudioSource):
 
     def cleanup(self):
         self._receive_thread_run = False
-        self._receive_thread.join()
-        self._reasock.close()
+        receive_thread = getattr(self, "_receive_thread", None)
+        if receive_thread is not None:
+            receive_thread.join()
+        reasock = getattr(self, "_reasock", None)
+        if reasock is not None:
+            reasock.close()
